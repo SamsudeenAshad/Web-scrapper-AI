@@ -22,9 +22,11 @@ class ShadAIScraper {
         document.documentElement.setAttribute('data-theme', this.currentTheme);
         const themeToggle = document.getElementById('themeToggle');
         
-        themeToggle.addEventListener('click', () => {
-            this.toggleTheme();
-        });
+        if (themeToggle) {
+            themeToggle.addEventListener('click', () => {
+                this.toggleTheme();
+            });
+        }
     }
 
     toggleTheme() {
@@ -50,22 +52,24 @@ class ShadAIScraper {
                 this.selectOption(option, index);
             });
             
-            // Add hover sound effect (optional)
+            // Add hover effect
             option.addEventListener('mouseenter', () => {
                 this.addHoverEffect(option);
             });
         });
 
         // Handle form submission
-        scrapeForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            this.handleFormSubmit();
-        });
+        if (scrapeForm) {
+            scrapeForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                this.handleFormSubmit();
+            });
 
-        // Handle form reset
-        scrapeForm.addEventListener('reset', () => {
-            this.resetForm();
-        });
+            // Handle form reset
+            scrapeForm.addEventListener('reset', () => {
+                this.resetForm();
+            });
+        }
 
         // Handle download and preview buttons
         document.addEventListener('click', (e) => {

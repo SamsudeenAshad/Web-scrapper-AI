@@ -155,9 +155,7 @@ class ShadAIScraper {
             this.enableForm();
             this.isProcessing = false;
         }
-    }
-
-    displayResults(data, type, processingTime) {
+    }    displayResults(data, type, processingTime) {
         const resultsSection = document.getElementById('results');
         const resultsContent = document.getElementById('resultsContent');
         
@@ -166,9 +164,9 @@ class ShadAIScraper {
         if (type === 'images_videos') {
             this.displayMediaContent(data, resultsContent);
         } else if (type === 'content') {
-            this.displayTextContent(data, resultsContent);
+            this.displayTextContent(data.content, resultsContent);
         } else if (type === 'urls') {
-            this.displayUrlContent(data, resultsContent);
+            this.displayUrlContent(data.urls, resultsContent);
         }
 
         resultsSection.style.display = 'block';
@@ -176,14 +174,39 @@ class ShadAIScraper {
         setTimeout(() => {
             resultsSection.scrollIntoView({ behavior: 'smooth' });
         }, 500);
-    }
-
-    updateStats(data, processingTime) {
+    }    updateStats(data, processingTime) {
         const totalItems = document.getElementById('totalItems');
         const processingTimeEl = document.getElementById('processingTime');
         const successRate = document.getElementById('successRate');
 
-        const itemCount = Array.isArray(data) ? data.length : (data.images?.length || 0) + (data.videos?.length || 0);
+        let itemCount = 0;
+        if (data.type === 'images_videos') {
+            itemCount = (data.images?.length || 0) + (data.videos?.length || 0);
+        } else if (data.type === 'content') {
+            // If content is an object, use word_count or character length
+            if (typeof data.content === 'object') {
+                itemCount = data.content.word_count || data.content.full_text?.length || 0;
+            } else {
+                itemCount = data.content ? data.content.length : 0;
+            }
+        } else if (data.type === 'urls') {
+            // Handle URLs object with categories or simple array
+            if (data.urls && typeof data.urls === 'object') {
+                if (data.urls.totals) {
+                    itemCount = data.urls.totals.total || 0;
+                } else if (Array.isArray(data.urls)) {
+                    itemCount = data.urls.length;
+                } else {
+                    // Count all URLs in all categories
+                    const categories = ['internal_links', 'external_links', 'email_links', 'social_links', 'file_links', 'tel_links'];
+                    itemCount = categories.reduce((acc, category) => {
+                        return acc + (data.urls[category]?.length || 0);
+                    }, 0);
+                }
+            } else {
+                itemCount = 0;
+            }
+        }
         
         if (totalItems) totalItems.textContent = itemCount;
         if (processingTimeEl) processingTimeEl.textContent = processingTime + 's';
@@ -233,44 +256,125 @@ class ShadAIScraper {
                 `).join('')}
             </div>
         `;
-    }
-
-    displayTextContent(data, container) {
+    }    displayTextContent(content, container) {
+        // Handle case where content might be undefined or null
+        if (!content) {
+            container.innerHTML = '<div class="alert alert-warning">No content found</div>';
+            return;
+        }
+        
+        // If content is an object, extract the full_text
+        const text = typeof content === 'object' ? content.full_text || '' : content;
+        
         container.innerHTML = `
             <div class="content-preview">
                 <div class="mb-3 d-flex justify-content-between align-items-center">
                     <h5><i class="fas fa-file-alt me-2"></i>Extracted Content</h5>
                     <span class="badge" style="background: var(--gradient-primary); color: white;">
-                        ${data.length} characters
+                        ${text.length} characters
                     </span>
                 </div>
                 <div style="line-height: 1.8; font-size: 1.1rem;">
-                    ${data.replace(/\n/g, '<br>')}
+                    ${text.replace(/\n/g, '<br>')}
                 </div>
+                ${content.headings && content.headings.length > 0 ? `
+                    <div class="mt-4">
+                        <h6><i class="fas fa-heading me-2"></i>Headings Found</h6>
+                        <div class="headings-list">
+                            ${content.headings.map(h => `
+                                <div class="heading-item">
+                                    <span class="badge bg-secondary me-2">H${h.level}</span>
+                                    ${h.text}
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+                ${content.word_count ? `
+                    <div class="mt-3">
+                        <small class="text-muted">
+                            <i class="fas fa-calculator me-1"></i>
+                            Word count: ${content.word_count}
+                        </small>
+                    </div>
+                ` : ''}
             </div>
         `;
-    }
-
-    displayUrlContent(data, container) {
+    }    displayUrlContent(urls, container) {
+        // Handle case where urls might be undefined or null
+        if (!urls) {
+            container.innerHTML = '<div class="alert alert-warning">No URLs found</div>';
+            return;
+        }
+        
+        // If urls is an object with categorized links, extract all links
+        let urlList = [];
+        if (typeof urls === 'object' && !Array.isArray(urls)) {
+            // Flatten all URL categories into a single array
+            const categories = ['internal_links', 'external_links', 'email_links', 'social_links', 'file_links', 'tel_links'];
+            urlList = categories.reduce((acc, category) => {
+                if (urls[category] && Array.isArray(urls[category])) {
+                    return acc.concat(urls[category]);
+                }
+                return acc;
+            }, []);
+        } else if (Array.isArray(urls)) {
+            urlList = urls;
+        }
+        
         container.innerHTML = `
             <div class="url-list">
                 <div class="mb-3 d-flex justify-content-between align-items-center">
                     <h5><i class="fas fa-link me-2"></i>Extracted URLs</h5>
                     <span class="badge" style="background: var(--gradient-primary); color: white;">
-                        ${data.length} links found
+                        ${urlList.length} links found
                     </span>
                 </div>
-                ${data.map((url) => `
-                    <div class="url-item">
-                        <a href="${url}" target="_blank" class="url-link">
-                            <i class="fas fa-external-link-alt me-2"></i>
-                            ${url}
-                        </a>
-                        <button class="btn btn-sm btn-outline-primary" onclick="navigator.clipboard.writeText('${url}')">
-                            <i class="fas fa-copy"></i>
-                        </button>
+                ${urlList.length > 0 ? `
+                    ${urlList.map((url) => `
+                        <div class="url-item">
+                            <a href="${url}" target="_blank" class="url-link">
+                                <i class="fas fa-external-link-alt me-2"></i>
+                                ${url}
+                            </a>
+                            <button class="btn btn-sm btn-outline-primary" onclick="navigator.clipboard.writeText('${url}')">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                        </div>
+                    `).join('')}
+                ` : `
+                    <div class="text-center p-4">
+                        <i class="fas fa-info-circle fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">No URLs found on this page.</p>
                     </div>
-                `).join('')}
+                `}
+                ${urls.totals ? `
+                    <div class="mt-4">
+                        <h6><i class="fas fa-chart-bar me-2"></i>URL Statistics</h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <small class="text-muted">
+                                    <i class="fas fa-home me-1"></i>Internal: ${urls.totals.internal || 0}
+                                </small>
+                            </div>
+                            <div class="col-md-6">
+                                <small class="text-muted">
+                                    <i class="fas fa-external-link-alt me-1"></i>External: ${urls.totals.external || 0}
+                                </small>
+                            </div>
+                            <div class="col-md-6">
+                                <small class="text-muted">
+                                    <i class="fas fa-envelope me-1"></i>Email: ${urls.totals.email || 0}
+                                </small>
+                            </div>
+                            <div class="col-md-6">
+                                <small class="text-muted">
+                                    <i class="fas fa-share-alt me-1"></i>Social: ${urls.totals.social || 0}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                ` : ''}
             </div>
         `;
     }

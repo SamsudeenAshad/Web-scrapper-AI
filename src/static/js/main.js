@@ -44,9 +44,12 @@ class ShadAIScraper {
     setupEventListeners() {
         const scrapeForm = document.getElementById('scrapeForm');
         const scrapeOptions = document.querySelectorAll('.scrape-option');
+        const demoBtn = document.getElementById('demoBtn');
+        const tourBtn = document.getElementById('tourBtn');
         
         scrapeOptions.forEach((option) => {
-            option.addEventListener('click', () => {
+            option.addEventListener('click', (e) => {
+                this.addRippleEffect(option, e);
                 this.selectOption(option);
             });
         });
@@ -56,19 +59,25 @@ class ShadAIScraper {
                 e.preventDefault();
                 this.handleFormSubmit();
             });
+        }
 
-            scrapeForm.addEventListener('reset', () => {
-                this.resetForm();
+        if (demoBtn) {
+            demoBtn.addEventListener('click', () => {
+                this.runDemo();
             });
         }
 
-        document.addEventListener('click', (e) => {
-            if (e.target.id === 'downloadBtn') {
-                this.handleDownload();
-            }
-            if (e.target.id === 'previewBtn') {
-                this.handlePreview();
-            }
+        if (tourBtn) {
+            tourBtn.addEventListener('click', () => {
+                this.startTour();
+            });
+        }
+
+        // Add ripple effects to buttons
+        document.querySelectorAll('.btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                this.addRippleEffect(btn, e);
+            });
         });
     }
 
@@ -108,9 +117,7 @@ class ShadAIScraper {
         } catch (_) {
             return false;
         }
-    }
-
-    async startScraping(url, type) {
+    }    async startScraping(url, type) {
         if (this.isProcessing) return;
         
         this.isProcessing = true;
@@ -128,19 +135,21 @@ class ShadAIScraper {
                 body: JSON.stringify({ url, type })
             });
 
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+            }
+
             const result = await response.json();
             const processingTime = ((Date.now() - startTime) / 1000).toFixed(1);
 
-            if (result.success) {
-                this.displayResults(result.data, type, processingTime);
-                this.showToast('Scraping completed successfully!', 'success');
-            } else {
-                throw new Error(result.error || 'Scraping failed');
-            }
+            // Backend returns data directly, not wrapped in success object
+            this.displayResults(result, type, processingTime);
+            this.showToast('Scraping completed successfully!', 'success');
 
         } catch (error) {
             console.error('Scraping error:', error);
-            this.showToast('Scraping failed. Please try again.', 'error');
+            this.showToast(`Scraping failed: ${error.message}`, 'error');
         } finally {
             this.hideLoadingOverlay();
             this.enableForm();
@@ -340,9 +349,7 @@ class ShadAIScraper {
         }
         
         this.showToast('Form reset successfully', 'info');
-    }
-
-    showToast(message, type = 'info') {
+    }    showToast(message, type = 'info') {
         const existingToasts = document.querySelectorAll('.toast-notification');
         existingToasts.forEach(toast => toast.remove());
 
@@ -364,26 +371,37 @@ class ShadAIScraper {
             right: 20px;
             background: ${this.getToastColor(type)};
             color: white;
-            padding: 15px 20px;
-            border-radius: 10px;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+            padding: 15px 25px;
+            border-radius: 15px;
+            box-shadow: 0 12px 35px rgba(0,0,0,0.4);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
             z-index: 10000;
-            transform: translateX(400px);
-            transition: all 0.3s ease;
+            transform: translateX(400px) scale(0.8);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            animation: toastBounce 0.5s ease;
         `;
 
         document.body.appendChild(toast);
 
         setTimeout(() => {
-            toast.style.transform = 'translateX(0)';
+            toast.style.transform = 'translateX(0) scale(1)';
         }, 100);
+
+        // Add pulse effect for success messages
+        if (type === 'success') {
+            toast.style.animation = 'toastBounce 0.5s ease, toastPulse 1s ease 0.5s';
+        }
 
         setTimeout(() => {
             if (toast.parentElement) {
-                toast.style.transform = 'translateX(400px)';
-                setTimeout(() => toast.remove(), 300);
+                toast.style.transform = 'translateX(400px) scale(0.8)';
+                setTimeout(() => toast.remove(), 400);
             }
         }, 4000);
+
+        // Add haptic feedback simulation
+        this.addHapticFeedback(type);
     }
 
     getToastIcon(type) {
@@ -520,6 +538,107 @@ class ShadAIScraper {
         const results = document.getElementById('results');
         if (results && results.style.display !== 'none') {
             results.scrollIntoView({ behavior: 'smooth' });
+        }
+    }
+
+    addHapticFeedback(type) {
+        // Simulate haptic feedback with visual cues
+        const body = document.body;
+        const intensity = type === 'error' ? '0.3s' : '0.15s';
+        
+        body.style.animation = `subtleVibrate ${intensity} ease`;
+        setTimeout(() => {
+            body.style.animation = '';
+        }, 300);
+    }
+
+    // Enhanced UI interactions
+    addRippleEffect(element, event) {
+        const rect = element.getBoundingClientRect();
+        const size = Math.max(rect.width, rect.height);
+        const x = event.clientX - rect.left - size / 2;
+        const y = event.clientY - rect.top - size / 2;
+        
+        const ripple = document.createElement('span');
+        ripple.style.cssText = `
+            position: absolute;
+            width: ${size}px;
+            height: ${size}px;
+            left: ${x}px;
+            top: ${y}px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            transform: scale(0);
+            animation: ripple 0.6s linear;
+            pointer-events: none;
+        `;
+        
+        element.style.position = 'relative';
+        element.style.overflow = 'hidden';
+        element.appendChild(ripple);
+        
+        setTimeout(() => ripple.remove(), 600);
+    }
+
+    runDemo() {
+        this.showToast('Starting demo mode...', 'info');
+        
+        // Simulate demo scraping
+        setTimeout(() => {
+            document.getElementById('url').value = 'https://example.com';
+            this.showToast('Demo URL filled', 'success');
+        }, 1000);
+
+        setTimeout(() => {
+            const imageOption = document.querySelector('[data-type="images"]');
+            if (imageOption) {
+                this.selectOption(imageOption);
+                this.showToast('Image scraping selected for demo', 'success');
+            }
+        }, 2000);
+
+        setTimeout(() => {
+            this.showToast('Demo completed! You can now try with your own URL', 'success');
+        }, 3000);
+    }
+
+    startTour() {
+        const tourSteps = [
+            { element: '#url', message: 'Enter any website URL here' },
+            { element: '.scrape-option', message: 'Select what type of content to extract' },
+            { element: '.btn-primary', message: 'Click to start scraping' },
+            { element: '.theme-toggle', message: 'Toggle between light and dark themes' }
+        ];
+
+        this.showToast('Starting quick tour...', 'info');
+        this.runTourSteps(tourSteps, 0);
+    }
+
+    runTourSteps(steps, index) {
+        if (index >= steps.length) {
+            this.showToast('Tour completed! Start scraping any website now', 'success');
+            return;
+        }
+
+        const step = steps[index];
+        const element = document.querySelector(step.element);
+        
+        if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            // Highlight element
+            element.style.outline = '3px solid var(--primary-color)';
+            element.style.outlineOffset = '5px';
+            
+            this.showToast(step.message, 'info');
+            
+            setTimeout(() => {
+                element.style.outline = '';
+                element.style.outlineOffset = '';
+                this.runTourSteps(steps, index + 1);
+            }, 2500);
+        } else {
+            this.runTourSteps(steps, index + 1);
         }
     }
 }

@@ -2,16 +2,21 @@ from flask import Flask, render_template, request, jsonify, send_file, flash, re
 from flask_cors import CORS
 import os
 import json
+import sys
 from werkzeug.utils import secure_filename
-from config import Config
-from src.scraper.image_scraper import ImageScraper
-from src.scraper.video_scraper import VideoScraper
-from src.scraper.content_scraper import ContentScraper
-from src.scraper.url_scraper import URLScraper
-from src.utils.document_generator import DocumentGenerator
-from src.utils.file_handler import FileHandler
 
-app = Flask(__name__)
+# Add src directory to Python path
+sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
+
+from config import Config
+from scraper.image_scraper import ImageScraper
+from scraper.video_scraper import VideoScraper
+from scraper.content_scraper import ContentScraper
+from scraper.url_scraper import URLScraper
+from utils.document_generator import DocumentGenerator
+from utils.file_handler import FileHandler
+
+app = Flask(__name__, template_folder='src/templates', static_folder='src/static')
 app.config.from_object(Config)
 CORS(app)
 
@@ -76,21 +81,33 @@ def scrape():
 @app.route('/download/<item_type>/<int:item_index>')
 def download_item(item_type, item_index):
     try:
-        # Get the stored results from session or temporary storage
-        # For simplicity, we'll use a basic approach here
         if item_type == 'image':
             # Download image
-            filename = file_handler.download_image(request.args.get('url'), item_index)
+            image_url = request.args.get('url')
+            if not image_url:
+                return jsonify({'error': 'Image URL is required'}), 400
+            filename = file_handler.download_image(image_url, item_index)
             return send_file(filename, as_attachment=True)
+            
         elif item_type == 'video':
             # Download video
-            filename = file_handler.download_video(request.args.get('url'), item_index)
+            video_url = request.args.get('url')
+            if not video_url:
+                return jsonify({'error': 'Video URL is required'}), 400
+            filename = file_handler.download_video(video_url, item_index)
             return send_file(filename, as_attachment=True)
+            
         elif item_type == 'content':
             # Generate and download Word document
-            content = request.args.get('content', '')
-            filename = doc_generator.create_document(content)
+            content_json = request.args.get('content', '{}')
+            try:
+                content_data = json.loads(content_json)
+            except:
+                content_data = {'full_text': content_json, 'title': 'Scraped Content'}
+            
+            filename = doc_generator.create_document(content_data)
             return send_file(filename, as_attachment=True, download_name='scraped_content.docx')
+            
         else:
             return jsonify({'error': 'Invalid item type'}), 400
     

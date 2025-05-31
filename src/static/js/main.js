@@ -14,6 +14,9 @@ class ShadAIScraper {
         this.setupEventListeners();
         this.setupAnimations();
         this.setupScrollToTop();
+        this.setupMouseTracker();
+        this.setupKeyboardShortcuts();
+        this.setupParticleEffects();
     }
 
     setupTheme() {
@@ -431,6 +434,81 @@ class ShadAIScraper {
         
         animatedElements.forEach(el => {
             el.style.transition = 'all 0.6s ease';
+        });
+    }
+
+    setupMouseTracker() {
+        const mouseTrailer = document.getElementById('mouseTrailer');
+        if (!mouseTrailer) return;
+
+        let mouseX = 0;
+        let mouseY = 0;
+        let trailX = 0;
+        let trailY = 0;
+
+        document.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+        });
+
+        const updateTrailer = () => {
+            const diffX = mouseX - trailX;
+            const diffY = mouseY - trailY;
+            
+            trailX += diffX * 0.1;
+            trailY += diffY * 0.1;
+            
+            mouseTrailer.style.left = trailX + 'px';
+            mouseTrailer.style.top = trailY + 'px';
+            
+            requestAnimationFrame(updateTrailer);
+        };
+
+        updateTrailer();
+    }
+
+    setupKeyboardShortcuts() {
+        document.addEventListener('keydown', (e) => {
+            // Ctrl + / to toggle theme
+            if (e.ctrlKey && e.key === '/') {
+                e.preventDefault();
+                this.toggleTheme();
+                this.showToast('Theme switched!', 'info');
+            }
+            
+            // Escape key to close modals/reset
+            if (e.key === 'Escape') {
+                this.resetForm();
+            }
+        });
+    }
+
+    setupParticleEffects() {
+        // Add random sparkle effect to particles
+        const particles = document.querySelectorAll('.particle');
+        particles.forEach((particle, index) => {
+            setInterval(() => {
+                if (Math.random() > 0.7) {
+                    particle.style.boxShadow = `0 0 20px var(--primary-color)`;
+                    setTimeout(() => {
+                        particle.style.boxShadow = '';
+                    }, 500);
+                }
+            }, 3000 + index * 500);
+        });
+
+        // Interactive web lines
+        const webLines = document.querySelectorAll('.web-line');
+        webLines.forEach(line => {
+            line.addEventListener('mouseenter', () => {
+                line.style.opacity = '0.8';
+                line.style.transform = 'scale(1.1)';
+            });
+            
+            line.addEventListener('mouseleave', () => {
+                line.style.opacity = '';
+                line.style.transform = '';
+            });
         });
     }
 

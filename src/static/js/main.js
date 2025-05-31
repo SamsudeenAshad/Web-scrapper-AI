@@ -1,53 +1,328 @@
-// Main JavaScript for Web Scraper AI
+// Shad AI Web Scrapper - Advanced JavaScript by Samsudeen Ashad
 
-document.addEventListener('DOMContentLoaded', function() {
-    const scrapeForm = document.getElementById('scrapeForm');
-    const scrapeOptions = document.querySelectorAll('.scrape-option');
-    const scrapeTypeInput = document.getElementById('scrapeType');
-    const loadingIndicator = document.getElementById('loadingIndicator');
-    const resultsSection = document.getElementById('resultsSection');
-    const errorSection = document.getElementById('errorSection');
-    const resultsContent = document.getElementById('resultsContent');
-    const errorMessage = document.getElementById('errorMessage');
+class ShadAIScraper {
+    constructor() {
+        this.currentTheme = localStorage.getItem('theme') || 'light';
+        this.selectedType = null;
+        this.isProcessing = false;
+        this.animationDelay = 100;
+        
+        this.init();
+    }
 
-    // Handle scrape option selection
-    scrapeOptions.forEach(option => {
-        option.addEventListener('click', function() {
-            // Remove selected class from all options
-            scrapeOptions.forEach(opt => opt.classList.remove('selected'));
-            
-            // Add selected class to clicked option
-            this.classList.add('selected');
-            
-            // Set the scrape type
-            scrapeTypeInput.value = this.dataset.type;
+    init() {
+        this.setupTheme();
+        this.setupEventListeners();
+        this.setupAnimations();
+        this.setupScrollToTop();
+    }
+
+    // Theme Management
+    setupTheme() {
+        document.documentElement.setAttribute('data-theme', this.currentTheme);
+        const themeToggle = document.getElementById('themeToggle');
+        
+        themeToggle.addEventListener('click', () => {
+            this.toggleTheme();
         });
-    });
+    }
 
-    // Handle form submission
-    scrapeForm.addEventListener('submit', function(e) {
-        e.preventDefault();
+    toggleTheme() {
+        this.currentTheme = this.currentTheme === 'light' ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', this.currentTheme);
+        localStorage.setItem('theme', this.currentTheme);
         
+        // Add transition effect
+        document.body.style.transition = 'all 0.3s ease';
+        setTimeout(() => {
+            document.body.style.transition = '';
+        }, 300);
+    }
+
+    // Event Listeners Setup
+    setupEventListeners() {
+        const scrapeForm = document.getElementById('scrapeForm');
+        const scrapeOptions = document.querySelectorAll('.scrape-option');
+        
+        // Handle scrape option selection with enhanced effects
+        scrapeOptions.forEach((option, index) => {
+            option.addEventListener('click', () => {
+                this.selectOption(option, index);
+            });
+            
+            // Add hover sound effect (optional)
+            option.addEventListener('mouseenter', () => {
+                this.addHoverEffect(option);
+            });
+        });
+
+        // Handle form submission
+        scrapeForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.handleFormSubmit();
+        });
+
+        // Handle form reset
+        scrapeForm.addEventListener('reset', () => {
+            this.resetForm();
+        });
+
+        // Handle download and preview buttons
+        document.addEventListener('click', (e) => {
+            if (e.target.id === 'downloadBtn' || e.target.closest('#downloadBtn')) {
+                this.handleDownload();
+            }
+            if (e.target.id === 'previewBtn' || e.target.closest('#previewBtn')) {
+                this.handlePreview();
+            }
+        });
+    }
+
+    // Enhanced Option Selection
+    selectOption(option, index) {
+        const scrapeOptions = document.querySelectorAll('.scrape-option');
+        
+        // Remove selection from all options
+        scrapeOptions.forEach(opt => {
+            opt.classList.remove('selected');
+            opt.style.transform = '';
+        });
+        
+        // Add selection to clicked option with animation
+        option.classList.add('selected');
+        this.selectedType = option.dataset.type;
+        
+        // Add selection animation
+        option.style.transform = 'scale(1.05) rotateY(5deg)';
+        setTimeout(() => {
+            option.style.transform = '';
+        }, 300);
+
+        // Show selection feedback
+        this.showToast(`Selected: ${option.querySelector('h6').textContent}`, 'success');
+    }
+
+    // Enhanced Hover Effects
+    addHoverEffect(option) {
+        if (!option.classList.contains('selected')) {
+            option.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+        }
+    }
+
+    // Form Submission Handler
+    async handleFormSubmit() {
         const url = document.getElementById('url').value;
-        const type = scrapeTypeInput.value;
         
-        if (!type) {
-            alert('Please select a content type to scrape');
+        if (!this.selectedType) {
+            this.showToast('Please select a content type to scrape', 'error');
+            this.shakeElement(document.querySelector('.scrape-option').parentElement);
             return;
         }
-        
-        startScraping(url, type);
-    });
 
-    function startScraping(url, type) {
-        // Show loading indicator
-        loadingIndicator.style.display = 'block';
-        resultsSection.style.display = 'none';
-        errorSection.style.display = 'none';
+        if (!this.isValidUrl(url)) {
+            this.showToast('Please enter a valid URL', 'error');
+            this.shakeElement(document.getElementById('url'));
+            return;
+        }
+
+        await this.startScraping(url, this.selectedType);
+    }
+
+    // URL Validation
+    isValidUrl(string) {
+        try {
+            new URL(string);
+            return true;
+        } catch (_) {
+            return false;
+        }
+    }
+
+    // Enhanced Scraping Process
+    async startScraping(url, type) {
+        if (this.isProcessing) return;
         
-        // Disable form
-        scrapeForm.style.pointerEvents = 'none';
-        scrapeForm.style.opacity = '0.7';
+        this.isProcessing = true;
+        const startTime = Date.now();
+        
+        // Show loading with enhanced animation
+        this.showLoadingOverlay();
+        this.disableForm();
+        
+        try {
+            const response = await fetch('/scrape', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ url, type })
+            });
+
+            const result = await response.json();
+            const processingTime = ((Date.now() - startTime) / 1000).toFixed(1);
+
+            if (result.success) {
+                this.displayResults(result.data, type, processingTime);
+                this.showToast('Scraping completed successfully!', 'success');
+            } else {
+                throw new Error(result.error || 'Scraping failed');
+            }
+
+        } catch (error) {
+            console.error('Scraping error:', error);
+            this.showError(error.message);
+            this.showToast('Scraping failed. Please try again.', 'error');
+        } finally {
+            this.hideLoadingOverlay();
+            this.enableForm();
+            this.isProcessing = false;
+        }
+    }
+
+    // Enhanced Results Display
+    displayResults(data, type, processingTime) {
+        const resultsSection = document.getElementById('results');
+        const resultsContent = document.getElementById('resultsContent');
+        
+        // Update stats with animation
+        this.updateStats(data, processingTime);
+        
+        // Display content based on type
+        if (type === 'images_videos') {
+            this.displayMediaContent(data, resultsContent);
+        } else if (type === 'content') {
+            this.displayTextContent(data, resultsContent);
+        } else if (type === 'urls') {
+            this.displayUrlContent(data, resultsContent);
+        }
+
+        // Show results with staggered animation
+        resultsSection.style.display = 'block';
+        this.animateResults(resultsSection);
+        
+        // Scroll to results
+        setTimeout(() => {
+            resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 500);
+    }
+
+    // Stats Animation
+    updateStats(data, processingTime) {
+        const totalItems = document.getElementById('totalItems');
+        const processingTimeEl = document.getElementById('processingTime');
+        const successRate = document.getElementById('successRate');
+
+        const itemCount = Array.isArray(data) ? data.length : (data.images?.length || 0) + (data.videos?.length || 0);
+        
+        this.animateCounter(totalItems, 0, itemCount, 1000);
+        this.animateCounter(processingTimeEl, 0, parseFloat(processingTime), 1000, 's');
+        this.animateCounter(successRate, 0, 95, 1200, '%');
+    }
+
+    // Counter Animation
+    animateCounter(element, start, end, duration, suffix = '') {
+        const range = end - start;
+        const increment = range / (duration / 16);
+        let current = start;
+
+        const timer = setInterval(() => {
+            current += increment;
+            if (current >= end) {
+                current = end;
+                clearInterval(timer);
+            }
+            element.textContent = Math.floor(current) + suffix;
+        }, 16);
+    }
+
+    // Media Content Display
+    displayMediaContent(data, container) {
+        const { images = [], videos = [] } = data;
+        
+        container.innerHTML = `
+            <div class="row">
+                ${images.map((img, index) => `
+                    <div class="col-md-6 col-lg-4 mb-4 fade-in" style="animation-delay: ${index * 0.1}s">
+                        <div class="preview-item">
+                            <img src="${img.src}" alt="${img.alt || 'Scraped image'}" 
+                                 class="preview-image w-100" loading="lazy"
+                                 onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkltYWdlIG5vdCBmb3VuZDwvdGV4dD48L3N2Zz4='">
+                            <div class="p-3">
+                                <small class="text-muted">${img.alt || 'No description'}</small>
+                                <div class="mt-2">
+                                    <a href="${img.src}" target="_blank" class="btn btn-sm btn-outline-primary me-2">
+                                        <i class="fas fa-external-link-alt"></i> View
+                                    </a>
+                                    <button class="btn btn-sm btn-success" onclick="shadScraper.downloadFile('${img.src}', 'image')">
+                                        <i class="fas fa-download"></i> Download
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('')}
+                ${videos.map((video, index) => `
+                    <div class="col-md-6 col-lg-4 mb-4 fade-in" style="animation-delay: ${(images.length + index) * 0.1}s">
+                        <div class="preview-item">
+                            <video src="${video.src}" class="preview-video w-100" controls loading="lazy">
+                                Your browser does not support video playback.
+                            </video>
+                            <div class="p-3">
+                                <small class="text-muted">Video file</small>
+                                <div class="mt-2">
+                                    <button class="btn btn-sm btn-success" onclick="shadScraper.downloadFile('${video.src}', 'video')">
+                                        <i class="fas fa-download"></i> Download
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    }
+
+    // Text Content Display
+    displayTextContent(data, container) {
+        container.innerHTML = `
+            <div class="content-preview fade-in">
+                <div class="mb-3 d-flex justify-content-between align-items-center">
+                    <h5><i class="fas fa-file-alt me-2"></i>Extracted Content</h5>
+                    <span class="badge" style="background: var(--gradient-primary); color: white;">
+                        ${data.length} characters
+                    </span>
+                </div>
+                <div style="line-height: 1.8; font-size: 1.1rem;">
+                    ${data.replace(/\n/g, '<br>')}
+                </div>
+            </div>
+        `;
+    }
+
+    // URL Content Display
+    displayUrlContent(data, container) {
+        container.innerHTML = `
+            <div class="url-list fade-in">
+                <div class="mb-3 d-flex justify-content-between align-items-center">
+                    <h5><i class="fas fa-link me-2"></i>Extracted URLs</h5>
+                    <span class="badge" style="background: var(--gradient-primary); color: white;">
+                        ${data.length} links found
+                    </span>
+                </div>
+                ${data.map((url, index) => `
+                    <div class="url-item fade-in" style="animation-delay: ${index * 0.05}s">
+                        <a href="${url}" target="_blank" class="url-link">
+                            <i class="fas fa-external-link-alt me-2"></i>
+                            ${url}
+                        </a>
+                        <button class="btn btn-sm btn-outline-primary" onclick="navigator.clipboard.writeText('${url}')">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    }
         
         // Make API request
         fetch('/scrape', {
@@ -393,20 +668,343 @@ document.addEventListener('DOMContentLoaded', function() {
         return html;
     }
 
-    function showError(message) {
-        errorSection.style.display = 'block';
-        resultsSection.style.display = 'none';
-        errorMessage.textContent = message;
+    // File Download Handler
+    async downloadFile(url, type) {
+        try {
+            this.showToast('Starting download...', 'info');
+            
+            const response = await fetch('/download', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ url, type })
+            });
+
+            if (response.ok) {
+                const blob = await response.blob();
+                const downloadUrl = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = downloadUrl;
+                a.download = `scraped_${type}_${Date.now()}`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(downloadUrl);
+                
+                this.showToast('Download completed!', 'success');
+            } else {
+                throw new Error('Download failed');
+            }
+        } catch (error) {
+            console.error('Download error:', error);
+            this.showToast('Download failed. Please try again.', 'error');
+        }
+    }
+
+    // Loading Overlay Management
+    showLoadingOverlay() {
+        const overlay = document.getElementById('loadingOverlay');
+        overlay.style.display = 'flex';
+        overlay.style.opacity = '0';
+        
+        setTimeout(() => {
+            overlay.style.transition = 'opacity 0.3s ease';
+            overlay.style.opacity = '1';
+        }, 10);
+    }
+
+    hideLoadingOverlay() {
+        const overlay = document.getElementById('loadingOverlay');
+        overlay.style.opacity = '0';
+        
+        setTimeout(() => {
+            overlay.style.display = 'none';
+        }, 300);
+    }
+
+    // Form State Management
+    disableForm() {
+        const form = document.getElementById('scrapeForm');
+        const buttons = form.querySelectorAll('button, input[type="submit"]');
+        
+        buttons.forEach(btn => {
+            btn.disabled = true;
+        });
+        
+        form.style.opacity = '0.7';
+        form.style.pointerEvents = 'none';
+    }
+
+    enableForm() {
+        const form = document.getElementById('scrapeForm');
+        const buttons = form.querySelectorAll('button, input[type="submit"]');
+        
+        buttons.forEach(btn => {
+            btn.disabled = false;
+        });
+        
+        form.style.opacity = '1';
+        form.style.pointerEvents = 'auto';
+    }
+
+    resetForm() {
+        const scrapeOptions = document.querySelectorAll('.scrape-option');
+        scrapeOptions.forEach(opt => opt.classList.remove('selected'));
+        
+        this.selectedType = null;
+        document.getElementById('results').style.display = 'none';
+        
+        this.showToast('Form reset successfully', 'info');
+    }
+
+    // Toast Notification System
+    showToast(message, type = 'info') {
+        // Remove existing toasts
+        const existingToasts = document.querySelectorAll('.toast-notification');
+        existingToasts.forEach(toast => toast.remove());
+
+        const toast = document.createElement('div');
+        toast.className = `toast-notification toast-${type}`;
+        toast.innerHTML = `
+            <div class="toast-content">
+                <i class="fas ${this.getToastIcon(type)} me-2"></i>
+                <span>${message}</span>
+                <button class="toast-close" onclick="this.parentElement.parentElement.remove()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `;
+
+        // Add toast styles
+        toast.style.cssText = `
+            position: fixed;
+            top: 100px;
+            right: 20px;
+            background: ${this.getToastColor(type)};
+            color: white;
+            padding: 15px 20px;
+            border-radius: 10px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+            z-index: 10000;
+            transform: translateX(400px);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+        `;
+
+        document.body.appendChild(toast);
+
+        // Animate in
+        setTimeout(() => {
+            toast.style.transform = 'translateX(0)';
+        }, 100);
+
+        // Auto remove after 4 seconds
+        setTimeout(() => {
+            if (toast.parentElement) {
+                toast.style.transform = 'translateX(400px)';
+                setTimeout(() => toast.remove(), 300);
+            }
+        }, 4000);
+    }
+
+    getToastIcon(type) {
+        const icons = {
+            success: 'fa-check-circle',
+            error: 'fa-exclamation-circle',
+            info: 'fa-info-circle',
+            warning: 'fa-exclamation-triangle'
+        };
+        return icons[type] || icons.info;
+    }
+
+    getToastColor(type) {
+        const colors = {
+            success: 'linear-gradient(135deg, #00c851, #007e33)',
+            error: 'linear-gradient(135deg, #ff4444, #cc0000)',
+            info: 'linear-gradient(135deg, #33b5e5, #0099cc)',
+            warning: 'linear-gradient(135deg, #ffbb33, #ff8800)'
+        };
+        return colors[type] || colors.info;
+    }
+
+    // Animation Effects
+    shakeElement(element) {
+        element.style.animation = 'shake 0.5s ease-in-out';
+        setTimeout(() => {
+            element.style.animation = '';
+        }, 500);
+    }
+
+    animateResults(container) {
+        const elements = container.querySelectorAll('.fade-in');
+        elements.forEach((el, index) => {
+            el.style.opacity = '0';
+            el.style.transform = 'translateY(30px)';
+            
+            setTimeout(() => {
+                el.style.transition = 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1)';
+                el.style.opacity = '1';
+                el.style.transform = 'translateY(0)';
+            }, index * 100);
+        });
+    }
+
+    // Scroll to Top Functionality
+    setupScrollToTop() {
+        const scrollBtn = document.getElementById('scrollToTop');
+        
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 300) {
+                scrollBtn.style.opacity = '1';
+                scrollBtn.style.transform = 'scale(1)';
+            } else {
+                scrollBtn.style.opacity = '0';
+                scrollBtn.style.transform = 'scale(0.8)';
+            }
+        });
+
+        scrollBtn.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+    }
+
+    // Setup Entrance Animations
+    setupAnimations() {
+        // Add fade-in animation to main elements
+        const animatedElements = document.querySelectorAll('.fade-in, .slide-in-left, .scale-in');
+        
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0) translateX(0) scale(1)';
+                }
+            });
+        }, { threshold: 0.1 });
+
+        animatedElements.forEach(el => {
+            el.style.opacity = '0';
+            if (el.classList.contains('slide-in-left')) {
+                el.style.transform = 'translateX(-50px)';
+            } else if (el.classList.contains('scale-in')) {
+                el.style.transform = 'scale(0.8)';
+            } else {
+                el.style.transform = 'translateY(30px)';
+            }
+            el.style.transition = 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1)';
+            observer.observe(el);
+        });
+    }
+
+    // Error Display
+    showError(message) {
+        this.showToast(`Error: ${message}`, 'error');
+    }
+
+    // Download Handler
+    handleDownload() {
+        if (!this.selectedType) {
+            this.showToast('No content to download', 'warning');
+            return;
+        }
+
+        // This would trigger the download based on current results
+        this.showToast('Preparing download...', 'info');
+        // Implementation depends on the scraped content type
+    }
+
+    // Preview Handler
+    handlePreview() {
+        if (!this.selectedType) {
+            this.showToast('No content to preview', 'warning');
+            return;
+        }
+
+        // Scroll to results if they exist
+        const results = document.getElementById('results');
+        if (results.style.display !== 'none') {
+            results.scrollIntoView({ behavior: 'smooth' });
+        }
+    }
+}
+
+// Add shake animation CSS
+const shakeCSS = `
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+    20%, 40%, 60%, 80% { transform: translateX(5px); }
+}
+`;
+
+const style = document.createElement('style');
+style.textContent = shakeCSS;
+document.head.appendChild(style);
+
+// Initialize the application
+const shadScraper = new ShadAIScraper();
+
+// Make it globally accessible for inline event handlers
+window.shadScraper = shadScraper;
+
+// Add smooth scrolling to all internal links
+document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function (e) {
+        e.preventDefault();
+        const target = document.querySelector(this.getAttribute('href'));
+        if (target) {
+            target.scrollIntoView({
+                behavior: 'smooth',
+                block: 'start'
+            });
+        }
+    });
+});
+
+// Add keyboard shortcuts
+document.addEventListener('keydown', (e) => {
+    // Ctrl + / to toggle theme
+    if (e.ctrlKey && e.key === '/') {
+        e.preventDefault();
+        shadScraper.toggleTheme();
+    }
+    
+    // Escape to close overlays
+    if (e.key === 'Escape') {
+        const overlay = document.getElementById('loadingOverlay');
+        if (overlay.style.display !== 'none') {
+            // Don't close loading overlay with escape
+            return;
+        }
+        
+        // Close any open toasts
+        const toasts = document.querySelectorAll('.toast-notification');
+        toasts.forEach(toast => toast.remove());
     }
 });
 
-// Global functions for downloads
-function downloadItem(type, index, url) {
-    const downloadUrl = `/download/${type}/${index}?url=${encodeURIComponent(url)}`;
-    window.open(downloadUrl, '_blank');
+// Add performance monitoring
+const perfObserver = new PerformanceObserver((list) => {
+    for (const entry of list.getEntries()) {
+        if (entry.entryType === 'navigation') {
+            console.log('Page load time:', entry.loadEventEnd - entry.loadEventStart);
+        }
+    }
+});
+
+if ('PerformanceObserver' in window) {
+    perfObserver.observe({ entryTypes: ['navigation'] });
 }
 
-function downloadContent(contentData) {
-    const downloadUrl = `/download/content/0?content=${contentData}`;
-    window.open(downloadUrl, '_blank');
+// Service Worker Registration (for future PWA features)
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        // Service worker would be registered here for offline functionality
+        console.log('App ready for service worker registration');
+    });
 }

@@ -11,9 +11,9 @@
     --accent-color: #ffaa00;
     --bg-primary: #ffffff;
     --bg-secondary: #f8fafc;
-    --bg-card: rgba(255, 255, 255, 0.9);
-    --text-primary: #1a1a1a;
+    --bg-card: rgba(255, 255, 255, 0.9);    --text-primary: #1a1a1a;
     --text-secondary: #6b7280;
+    --text-color: #1a1a1a;
     --text-content: #ffffff;
     --border-color: rgba(255, 255, 255, 0.2);
     --shadow-light: rgba(255, 0, 102, 0.1);
@@ -30,9 +30,9 @@
     --accent-color: #ffcc00;
     --bg-primary: #0a0a0a;
     --bg-secondary: #1a1a1a;
-    --bg-card: rgba(26, 26, 26, 0.9);
-    --text-primary: #ffffff;
+    --bg-card: rgba(26, 26, 26, 0.9);    --text-primary: #ffffff;
     --text-secondary: #a1a1aa;
+    --text-color: #ffffff;
     --border-color: rgba(255, 255, 255, 0.1);
     --shadow-light: rgba(255, 51, 153, 0.2);
     --shadow-medium: rgba(255, 51, 153, 0.3);
@@ -258,13 +258,19 @@ body::after {
 }
 
 .navbar-toggler-icon {
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%28255, 255, 255, 0.8%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3e%3cpath fill='rgba%28255, 255, 255, 0.8%29' d='M7 10l5 5 5-5z'/%3e%3c/svg%3e");
     width: 1.2em;
     height: 1.2em;
+    transition: transform 0.3s ease;
 }
 
 [data-theme="dark"] .navbar-toggler-icon {
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%28255, 255, 255, 0.9%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3e%3cpath fill='rgba%28255, 255, 255, 0.9%29' d='M7 10l5 5 5-5z'/%3e%3c/svg%3e");
+}
+
+/* Rotate arrow when menu is expanded */
+.navbar-toggler[aria-expanded="true"] .navbar-toggler-icon {
+    transform: rotate(180deg);
 }
 
 @media (max-width: 991px) {
@@ -1624,4 +1630,62 @@ body::after {
     footer .d-flex.gap-3 {
         gap: 0.8rem !important;
     }
+}
+
+/* Enhanced Dark Mode Text Color Fixes */
+[data-theme="dark"] h1,
+[data-theme="dark"] h2,
+[data-theme="dark"] h3,
+[data-theme="dark"] h4,
+[data-theme="dark"] h5,
+[data-theme="dark"] h6 {
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] p,
+[data-theme="dark"] .text-content,
+[data-theme="dark"] .card-text {
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .form-label {
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .small,
+[data-theme="dark"] small {
+    color: var(--text-secondary) !important;
+}
+
+/* Fix any remaining hardcoded dark text */
+[data-theme="dark"] .text-dark {
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .text-muted {
+    color: var(--text-secondary) !important;
+}
+
+/* Ensure footer text is visible in dark mode */
+[data-theme="dark"] footer {
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] footer h5,
+[data-theme="dark"] footer h6,
+[data-theme="dark"] footer p {
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] footer small {
+    color: var(--text-secondary) !important;
+}
+
+/* Card header and body text fixes */
+[data-theme="dark"] .card-body {
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .stats-label {
+    color: var(--text-secondary) !important;
 }

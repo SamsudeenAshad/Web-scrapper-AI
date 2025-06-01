@@ -17,6 +17,7 @@ class ShadAIScraper {
         this.setupMouseTracker();
         this.setupKeyboardShortcuts();
         this.setupParticleEffects();
+        this.setupMobileOptimizations();
     }
 
     setupTheme() {
@@ -582,6 +583,41 @@ class ShadAIScraper {
         }
     }
 
+    closeImageModal() {
+        const modal = document.querySelector('.image-modal');
+        if (modal) {
+            modal.style.transform = 'scale(0.8)';
+            modal.style.opacity = '0';
+            setTimeout(() => {
+                if (modal.parentElement) {
+                    modal.remove();
+                }
+            }, 300);
+        }
+    }
+
+    copyToClipboard(text) {
+        navigator.clipboard.writeText(text).then(() => {
+            this.showToast('Copied to clipboard!', 'success');
+        }).catch(() => {
+            // Fallback for older browsers
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+            this.showToast('Copied to clipboard!', 'success');
+        });
+    }
+
+    addHapticFeedback(type) {
+        // Simulate haptic feedback with a subtle animation
+        if (navigator.vibrate && type === 'success') {
+            navigator.vibrate(50);
+        }
+    }
+
     showLoadingOverlay() {
         const overlay = document.getElementById('loadingOverlay');
         if (overlay) {
@@ -804,132 +840,97 @@ class ShadAIScraper {
         });
     }
 
-    handleDownload() {
-        this.showToast('Preparing download...', 'info');
-    }
-
-    handlePreview() {
-        const results = document.getElementById('results');
-        if (results && results.style.display !== 'none') {
-            results.scrollIntoView({ behavior: 'smooth' });
+    setupMobileOptimizations() {
+        // Detect mobile device
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        
+        if (isMobile) {
+            // Add mobile class to body
+            document.body.classList.add('mobile-device');
+            
+            // Optimize touch interactions
+            this.setupTouchOptimizations();
+            
+            // Improve mobile viewport handling
+            this.setupMobileViewport();
+            
+            // Add mobile-specific event listeners
+            this.setupMobileEventListeners();
         }
     }
-
-    addHapticFeedback(type) {
-        // Simulate haptic feedback with visual cues
-        const body = document.body;
-        const intensity = type === 'error' ? '0.3s' : '0.15s';
+    
+    setupTouchOptimizations() {
+        // Prevent zoom on double tap for buttons
+        const buttons = document.querySelectorAll('.btn, .scrape-option, .theme-toggle');
+        buttons.forEach(button => {
+            button.addEventListener('touchend', function(e) {
+                e.preventDefault();
+                e.target.click();
+            });
+        });
         
-        body.style.animation = `subtleVibrate ${intensity} ease`;
-        setTimeout(() => {
-            body.style.animation = '';
-        }, 300);
+        // Improve scroll performance on mobile
+        document.addEventListener('touchstart', function() {}, { passive: true });
+        document.addEventListener('touchmove', function() {}, { passive: true });
     }
-
-    // Enhanced UI interactions
-    addRippleEffect(element, event) {
-        const rect = element.getBoundingClientRect();
-        const size = Math.max(rect.width, rect.height);
-        const x = event.clientX - rect.left - size / 2;
-        const y = event.clientY - rect.top - size / 2;
-        
-        const ripple = document.createElement('span');
-        ripple.style.cssText = `
-            position: absolute;
-            width: ${size}px;
-            height: ${size}px;
-            left: ${x}px;
-            top: ${y}px;
-            background: rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            transform: scale(0);
-            animation: ripple 0.6s linear;
-            pointer-events: none;
-        `;
-        
-        element.style.position = 'relative';
-        element.style.overflow = 'hidden';
-        element.appendChild(ripple);
-        
-        setTimeout(() => ripple.remove(), 600);
-    }
-
-    runDemo() {
-        this.showToast('Starting demo mode...', 'info');
-        
-        // Simulate demo scraping
-        setTimeout(() => {
-            document.getElementById('url').value = 'https://example.com';
-            this.showToast('Demo URL filled', 'success');
-        }, 1000);
-
-        setTimeout(() => {
-            const imageOption = document.querySelector('[data-type="images"]');
-            if (imageOption) {
-                this.selectOption(imageOption);
-                this.showToast('Image scraping selected for demo', 'success');
-            }
-        }, 2000);
-
-        setTimeout(() => {
-            this.showToast('Demo completed! You can now try with your own URL', 'success');
-        }, 3000);
-    }
-
-    startTour() {
-        const tourSteps = [
-            { element: '#url', message: 'Enter any website URL here' },
-            { element: '.scrape-option', message: 'Select what type of content to extract' },
-            { element: '.btn-primary', message: 'Click to start scraping' },
-            { element: '.theme-toggle', message: 'Toggle between light and dark themes' }
-        ];
-
-        this.showToast('Starting quick tour...', 'info');
-        this.runTourSteps(tourSteps, 0);
-    }
-
-    runTourSteps(steps, index) {
-        if (index >= steps.length) {
-            this.showToast('Tour completed! Start scraping any website now', 'success');
-            return;
-        }
-
-        const step = steps[index];
-        const element = document.querySelector(step.element);
-        
-        if (element) {
-            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            
-            // Highlight element
-            element.style.outline = '3px solid var(--primary-color)';
-            element.style.outlineOffset = '5px';
-            
-            this.showToast(step.message, 'info');
-            
+    
+    setupMobileViewport() {
+        // Handle orientation changes
+        window.addEventListener('orientationchange', () => {
             setTimeout(() => {
-                element.style.outline = '';
-                element.style.outlineOffset = '';
-                this.runTourSteps(steps, index + 1);
-            }, 2500);
-        } else {
-            this.runTourSteps(steps, index + 1);
-        }
-    }
-
-    copyToClipboard(text) {
-        navigator.clipboard.writeText(text).then(() => {
-            this.showToast('URL copied to clipboard!', 'success');
-        }).catch(() => {
-            // Fallback for older browsers
-            const textArea = document.createElement('textarea');
-            textArea.value = text;
-            document.body.appendChild(textArea);
-            textArea.select();
-            document.execCommand('copy');
-            document.body.removeChild(textArea);
-            this.showToast('URL copied to clipboard!', 'success');
+                window.scrollTo(0, 1);
+                this.adjustLayoutForOrientation();
+            }, 100);
+        });
+        
+        // Handle mobile keyboard
+        const inputs = document.querySelectorAll('input, textarea');
+        inputs.forEach(input => {
+            input.addEventListener('focus', () => {
+                setTimeout(() => {
+                    input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 300);
+            });
         });
     }
+    
+    setupMobileEventListeners() {
+        // Add swipe gestures for image modal
+        let startX, startY, endX, endY;
+        
+        document.addEventListener('touchstart', (e) => {
+            startX = e.touches[0].clientX;
+            startY = e.touches[0].clientY;
+        }, { passive: true });
+        
+        document.addEventListener('touchend', (e) => {
+            endX = e.changedTouches[0].clientX;
+            endY = e.changedTouches[0].clientY;
+            this.handleSwipeGesture(startX, startY, endX, endY);
+        }, { passive: true });
+    }
+    
+    handleSwipeGesture(startX, startY, endX, endY) {
+        const deltaX = endX - startX;
+        const deltaY = endY - startY;
+        const minSwipeDistance = 100;
+        
+        // Close modal on swipe down
+        if (deltaY > minSwipeDistance && Math.abs(deltaX) < minSwipeDistance) {
+            const modal = document.querySelector('.image-modal.show');
+            if (modal) {
+                this.closeImageModal();
+            }
+        }
+    }
+    
+    adjustLayoutForOrientation() {
+        const isLandscape = window.orientation === 90 || window.orientation === -90;
+        document.body.classList.toggle('landscape', isLandscape);
+        document.body.classList.toggle('portrait', !isLandscape);
+    }
+
+    // ...existing code...
 }
 
 // Add shake animation CSS

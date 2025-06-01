@@ -66,7 +66,7 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <div class="navbar-nav ms-auto d-flex align-items-center gap-3">
                     <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme"></button>
-                    <span class="text-muted small d-none d-xl-inline">Design and Develop by Samsudeen Ashad</span>
+                    <span class="text-muted small d-none d-sm-inline mobile-dev-text">Design and Develop by Samsudeen Ashad</span>
                     <button id="tourBtn" class="btn btn-outline-secondary btn-sm pulse-on-hover">
                         <i class="fas fa-info-circle me-2"></i>Quick Tour
                     </button>
@@ -93,7 +93,7 @@
                     <i class="fas fa-robot me-3 fa-2x"></i>
                     <div>
                         <h4 class="mb-0">AI Web Scraper Engine</h4>
-                        <small class="opacity-75">Intelligent content extraction</small>
+                        <small class="opacity-10">Intelligent content extraction</small>
                     </div>
                 </div>
             </div>
@@ -113,7 +113,7 @@
                                    placeholder="https://example.com" required 
                                    style="border-radius: 0 15px 15px 0;">
                         </div>
-                        <div class="form-text">
+                        <div class="form-text form-label">
                             <i class="fas fa-info-circle me-1"></i>
                             Enter any website URL to extract content
                         </div>
@@ -252,8 +252,11 @@
         </div>    </div>
 
     <!-- Floating Action Button -->
-    <button class="fab tooltip-custom" data-tooltip="Scroll to top" id="scrollToTop">
-        <i class="fas fa-arrow-up"></i>
+    <button class="fab tooltip-custom animate-in" id="scrollToTop" aria-label="Scroll to top of page" data-tooltip="Back to top">
+        <div class="fab-content">
+            <i class="fas fa-arrow-up fa-bounce"></i>
+        </div>
+        <span class="pulse-animation"></span>
     </button>
 
     <!-- Loading Overlay -->

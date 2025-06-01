@@ -10,8 +10,9 @@
     --secondary-color: #00ccff;
     --accent-color: #ffaa00;
     --bg-primary: #ffffff;
-    --bg-secondary: #f8fafc;
-    --bg-card: rgba(255, 255, 255, 0.9);    --text-primary: #1a1a1a;
+    --bg-secondary: #f8fafc;    --bg-card: rgba(255, 255, 255, 0.9);
+    --card-background: #ffffff;
+    --text-primary: #1a1a1a;
     --text-secondary: #6b7280;
     --text-color: #1a1a1a;
     --text-content: #ffffff;
@@ -29,8 +30,9 @@
     --secondary-color: #00ffff;
     --accent-color: #ffcc00;
     --bg-primary: #0a0a0a;
-    --bg-secondary: #1a1a1a;
-    --bg-card: rgba(26, 26, 26, 0.9);    --text-primary: #ffffff;
+    --bg-secondary: #1a1a1a;    --bg-card: rgba(26, 26, 26, 0.9);
+    --card-background: #000000;
+    --text-primary: #ffffff;
     --text-secondary: #a1a1aa;
     --text-color: #ffffff;
     --border-color: rgba(255, 255, 255, 0.1);
@@ -258,7 +260,7 @@ body::after {
 }
 
 .navbar-toggler-icon {
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3e%3cpath fill='rgba%28255, 255, 255, 0.8%29' d='M7 10l5 5 5-5z'/%3e%3c/svg%3e");
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3e%3cpath fill='rgba%2826, 26, 26, 0.8%29' d='M7 10l5 5 5-5z'/%3e%3c/svg%3e");
     width: 1.2em;
     height: 1.2em;
     transition: transform 0.3s ease;
@@ -1152,12 +1154,39 @@ body::after {
     
     .navbar .container {
         padding: 0 0.5rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+    
+    /* Center the logo container on mobile */
+    .navbar .container > .logo-container {
+        order: 1;
+        flex: 1;
+        display: flex;
+        justify-content: center;
+    }
+    
+    /* Position navbar toggler on the right */
+    .navbar-toggler {
+        order: 2;
+        margin-left: auto;
+    }
+    
+    /* Navbar collapse takes full width */
+    .navbar-collapse {
+        order: 3;
+        width: 100%;
+        flex-basis: 100%;
     }
     
     .logo-container {
         flex-direction: row;
         gap: 10px;
         align-items: center;
+        justify-content: center;
+        width: 100%;
     }
     
     .logo-icon {
@@ -1688,4 +1717,27 @@ body::after {
 
 [data-theme="dark"] .stats-label {
     color: var(--text-secondary) !important;
+}
+
+/* Mobile Dev Text Visibility for 360px+ phones */
+@media (min-width: 360px) and (max-width: 575px) {
+    .mobile-dev-text {
+        display: inline !important;
+        font-size: 0.75rem;
+        text-align: center;
+        margin-top: 0.5rem;
+        order: 4;
+    }
+    
+    .navbar-nav .mobile-dev-text {
+        width: 100%;
+        display: block !important;
+    }
+}
+
+/* Hide on very small devices (below 360px) */
+@media (max-width: 359px) {
+    .mobile-dev-text {
+        display: none !important;
+    }
 }

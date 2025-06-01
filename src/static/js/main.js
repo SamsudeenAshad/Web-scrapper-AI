@@ -809,6 +809,35 @@ class ShadAIScraper {
                 this.resetForm();
             }
         });
+
+        // Tour keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (this.tourActive) {
+                switch (e.key) {
+                    case 'ArrowRight':
+                    case 'ArrowDown':
+                        e.preventDefault();
+                        const nextBtn = document.querySelector('.tour-next');
+                        if (nextBtn) nextBtn.click();
+                        break;
+                    case 'ArrowLeft':
+                    case 'ArrowUp':
+                        e.preventDefault();
+                        const prevBtn = document.querySelector('.tour-prev');
+                        if (prevBtn) prevBtn.click();
+                        break;
+                    case 'Escape':
+                        e.preventDefault();
+                        this.endTour();
+                        break;
+                    case 'Enter':
+                        e.preventDefault();
+                        const activeBtn = document.querySelector('.tour-next, .tour-finish');
+                        if (activeBtn) activeBtn.click();
+                        break;
+                }
+            }
+        });
     }
 
     setupParticleEffects() {
@@ -928,6 +957,400 @@ class ShadAIScraper {
         const isLandscape = window.orientation === 90 || window.orientation === -90;
         document.body.classList.toggle('landscape', isLandscape);
         document.body.classList.toggle('portrait', !isLandscape);
+    }    startTour() {
+        if (this.tourActive) {
+            return; // Prevent multiple tours running simultaneously
+        }
+
+        this.tourActive = true;
+        this.tourStep = 0;
+        
+        // Show welcome message
+        this.showToast('🎯 Starting Interactive Tour! Use arrow keys to navigate.', 'info');
+          const tourSteps = [
+            {
+                element: '.hero-title',
+                title: '🕷️ Welcome to Shad AI Web Scrapper!',
+                content: 'This is your advanced AI-powered web scraping tool with a modern spider-themed interface. Extract images, videos, content, and URLs from any website with ease.',
+                position: 'bottom'
+            },
+            {
+                element: '.scrape-option',
+                title: '🎯 Choose Content Type',
+                content: 'Select what type of content you want to extract:<br/>• <strong>Images</strong>: Extract all images from a webpage<br/>• <strong>Videos</strong>: Find and download video content<br/>• <strong>Content</strong>: Get text, headings, and structured data<br/>• <strong>URLs</strong>: Extract all links categorized by type',
+                position: 'top'
+            },
+            {
+                element: '#url',
+                title: '🌐 Enter Target URL',
+                content: 'Paste the website URL you want to scrape here. Make sure to include the full URL starting with http:// or https://. Our AI spider will analyze and extract the content you need.',
+                position: 'top'
+            },
+            {
+                element: '#scrapeBtn',
+                title: '🚀 Start Scraping',
+                content: 'Once you\'ve selected a content type and entered a URL, click this button to begin the extraction process. You\'ll see a beautiful spider loading animation while the AI works magic!',
+                position: 'top'
+            },
+            {
+                element: '#demoBtn',
+                title: '🎬 Try Demo Mode',
+                content: 'Want to see how it works first? Click here for an automated demonstration of the scraper. It will show you the entire workflow with realistic animations and sample data.',
+                position: 'top'
+            },
+            {
+                element: '.theme-toggle',
+                title: '🌓 Theme Toggle',
+                content: 'Switch between beautiful light and dark modes! Each theme has unique background patterns and colors. Pro tip: Press <kbd>Ctrl+/</kbd> as a keyboard shortcut!',
+                position: 'bottom'
+            },
+            {
+                element: '.fab',
+                title: '⬆️ Scroll to Top',
+                content: 'This floating action button appears when you scroll down the page. Click it to smoothly return to the top with a beautiful animation.',
+                position: 'left'
+            },
+            {
+                element: '.navbar',
+                title: '🎉 You\'re All Set!',
+                content: 'You\'ve completed the tour! The app includes many more features like ripple effects, mouse trails, and advanced animations. Start scraping and discover the magic! 🕷️✨',
+                position: 'bottom'
+            }
+        ];
+
+        this.showTourStep(tourSteps, 0);
+    }
+
+    showTourStep(steps, stepIndex) {
+        // Remove any existing tour elements
+        this.clearTourElements();
+
+        if (stepIndex >= steps.length) {
+            this.endTour();
+            return;
+        }
+
+        const step = steps[stepIndex];
+        const targetElement = document.querySelector(step.element);
+
+        if (!targetElement) {
+            // Skip this step if element not found
+            this.showTourStep(steps, stepIndex + 1);
+            return;
+        }
+
+        // Create tour overlay
+        const overlay = document.createElement('div');
+        overlay.className = 'tour-overlay';
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 9998;
+            transition: all 0.3s ease;
+        `;
+
+        // Create tour popup
+        const popup = document.createElement('div');
+        popup.className = 'tour-popup';
+        popup.innerHTML = `
+            <div class="tour-header">
+                <h5>${step.title}</h5>
+                <button class="tour-close" aria-label="Close tour">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="tour-content">
+                <p>${step.content}</p>
+            </div>
+            <div class="tour-footer">
+                <div class="tour-progress">
+                    <span>Step ${stepIndex + 1} of ${steps.length}</span>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: ${((stepIndex + 1) / steps.length) * 100}%"></div>
+                    </div>
+                </div>
+                <div class="tour-actions">
+                    ${stepIndex > 0 ? '<button class="btn btn-outline-secondary btn-sm tour-prev">Previous</button>' : ''}
+                    ${stepIndex < steps.length - 1 ? '<button class="btn btn-primary btn-sm tour-next">Next</button>' : '<button class="btn btn-success btn-sm tour-finish">Finish Tour</button>'}
+                </div>
+            </div>
+        `;
+
+        // Style the popup
+        popup.style.cssText = `
+            position: fixed;
+            background: var(--bg-card);
+            border: 2px solid var(--primary-color);
+            border-radius: 15px;
+            padding: 0;
+            max-width: 350px;
+            width: 90%;
+            z-index: 9999;
+            box-shadow: 0 20px 60px var(--shadow-medium);
+            backdrop-filter: blur(20px);
+            transform: scale(0.8);
+            opacity: 0;
+            transition: all 0.3s ease;
+        `;        // Add popup styles
+        const style = document.createElement('style');
+        style.textContent = `
+            .tour-header {
+                background: var(--gradient-primary);
+                color: white;
+                padding: 1rem;
+                border-radius: 13px 13px 0 0;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            .tour-header h5 {
+                margin: 0;
+                font-weight: 600;
+                font-size: 1.1rem;
+            }
+            .tour-close {
+                background: none;
+                border: none;
+                color: white;
+                font-size: 1.2rem;
+                cursor: pointer;
+                padding: 5px;
+                border-radius: 5px;
+                transition: background 0.2s ease;
+                width: 30px;
+                height: 30px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            .tour-close:hover {
+                background: rgba(255, 255, 255, 0.2);
+            }
+            .tour-content {
+                padding: 1.5rem;
+                color: var(--text-primary);
+                line-height: 1.6;
+            }
+            .tour-content p {
+                margin: 0;
+                line-height: 1.6;
+            }
+            .tour-content strong {
+                color: var(--primary-color);
+                font-weight: 600;
+            }
+            .tour-content kbd {
+                background: var(--bg-secondary);
+                color: var(--text-primary);
+                padding: 2px 6px;
+                border-radius: 3px;
+                font-size: 0.85em;
+                border: 1px solid var(--border-color);
+                font-family: monospace;
+            }
+            .tour-footer {
+                padding: 1rem 1.5rem;
+                border-top: 1px solid var(--border-color);
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                flex-wrap: wrap;
+                gap: 1rem;
+                background: rgba(255, 255, 255, 0.02);
+                border-radius: 0 0 13px 13px;
+            }
+            .tour-progress {
+                display: flex;
+                flex-direction: column;
+                gap: 0.5rem;
+                flex: 1;
+                min-width: 120px;
+            }
+            .tour-progress span {
+                font-size: 0.85rem;
+                color: var(--text-secondary);
+                font-weight: 500;
+            }
+            .progress-bar {
+                height: 4px;
+                background: var(--border-color);
+                border-radius: 2px;
+                overflow: hidden;
+            }
+            .progress-fill {
+                height: 100%;
+                background: var(--gradient-primary);
+                transition: width 0.3s ease;
+                border-radius: 2px;
+            }
+            .tour-actions {
+                display: flex;
+                gap: 0.5rem;
+            }
+            .tour-actions .btn {
+                font-size: 0.85rem;
+                padding: 0.5rem 1rem;
+                border-radius: 8px;
+                font-weight: 500;
+                min-width: 70px;
+            }
+            .tour-popup {
+                animation: tourPopupIn 0.3s ease;
+            }
+            @keyframes tourPopupIn {
+                from {
+                    transform: scale(0.7) translateY(-20px);
+                    opacity: 0;
+                }
+                to {
+                    transform: scale(1) translateY(0);
+                    opacity: 1;
+                }
+            }
+            @media (max-width: 480px) {
+                .tour-popup {
+                    max-width: 95% !important;
+                    margin: 0 auto;
+                }
+                .tour-footer {
+                    flex-direction: column;
+                    align-items: stretch;
+                }
+                .tour-actions {
+                    justify-content: center;
+                }
+                .tour-content {
+                    padding: 1rem;
+                }
+                .tour-header {
+                    padding: 0.8rem;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+
+        // Position the popup
+        this.positionTourPopup(popup, targetElement, step.position);
+
+        // Add highlight to target element
+        targetElement.classList.add('tour-highlight');
+
+        // Append elements
+        document.body.appendChild(overlay);
+        document.body.appendChild(popup);
+
+        // Animate in
+        setTimeout(() => {
+            popup.style.transform = 'scale(1)';
+            popup.style.opacity = '1';
+        }, 50);
+
+        // Add event listeners
+        popup.querySelector('.tour-close').addEventListener('click', () => this.endTour());
+        
+        const nextBtn = popup.querySelector('.tour-next');
+        if (nextBtn) {
+            nextBtn.addEventListener('click', () => this.showTourStep(steps, stepIndex + 1));
+        }
+
+        const prevBtn = popup.querySelector('.tour-prev');
+        if (prevBtn) {
+            prevBtn.addEventListener('click', () => this.showTourStep(steps, stepIndex - 1));
+        }
+
+        const finishBtn = popup.querySelector('.tour-finish');
+        if (finishBtn) {
+            finishBtn.addEventListener('click', () => this.endTour());
+        }
+
+        // Close on overlay click
+        overlay.addEventListener('click', () => this.endTour());
+
+        // Store current step
+        this.tourStep = stepIndex;
+    }
+
+    positionTourPopup(popup, targetElement, position) {
+        const rect = targetElement.getBoundingClientRect();
+        const popupRect = { width: 350, height: 200 }; // Approximate size
+
+        let top, left;
+
+        switch (position) {
+            case 'top':
+                top = rect.top - popupRect.height - 20;
+                left = rect.left + (rect.width / 2) - (popupRect.width / 2);
+                break;
+            case 'bottom':
+                top = rect.bottom + 20;
+                left = rect.left + (rect.width / 2) - (popupRect.width / 2);
+                break;
+            case 'left':
+                top = rect.top + (rect.height / 2) - (popupRect.height / 2);
+                left = rect.left - popupRect.width - 20;
+                break;
+            case 'right':
+                top = rect.top + (rect.height / 2) - (popupRect.height / 2);
+                left = rect.right + 20;
+                break;
+            default:
+                top = rect.bottom + 20;
+                left = rect.left + (rect.width / 2) - (popupRect.width / 2);
+        }
+
+        // Ensure popup stays within viewport
+        const viewport = {
+            width: window.innerWidth,
+            height: window.innerHeight
+        };
+
+        // Adjust horizontal position
+        if (left < 20) {
+            left = 20;
+        } else if (left + popupRect.width > viewport.width - 20) {
+            left = viewport.width - popupRect.width - 20;
+        }
+
+        // Adjust vertical position
+        if (top < 20) {
+            top = rect.bottom + 20;
+        } else if (top + popupRect.height > viewport.height - 20) {
+            top = rect.top - popupRect.height - 20;
+        }
+
+        popup.style.top = `${Math.max(20, top)}px`;
+        popup.style.left = `${Math.max(20, left)}px`;
+    }
+
+    clearTourElements() {
+        // Remove tour overlay and popup
+        const overlay = document.querySelector('.tour-overlay');
+        const popup = document.querySelector('.tour-popup');
+        const style = document.querySelector('style');
+
+        if (overlay) overlay.remove();
+        if (popup) popup.remove();
+
+        // Remove highlight from all elements
+        document.querySelectorAll('.tour-highlight').forEach(el => {
+            el.classList.remove('tour-highlight');
+        });
+    }    endTour() {
+        this.clearTourElements();
+        this.tourActive = false;
+        this.tourStep = 0;
+        
+        // Show completion message with more details
+        this.showToast('🎉 Tour completed! Pro tip: Use Ctrl+/ to toggle themes quickly!', 'success');
+        
+        // Add a subtle celebration effect
+        setTimeout(() => {
+            this.showToast('🕷️ Ready to start scraping? Try the demo mode first!', 'info');
+        }, 3000);
     }
 
     // ...existing code...

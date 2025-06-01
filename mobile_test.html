@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mobile Responsiveness Test - Shad AI Web Scrapper</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 20px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+        .test-item {
+            background: rgba(255, 255, 255, 0.1);
+            margin: 15px 0;
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 4px solid #00ccff;
+        }
+        .success { border-left-color: #00ff88; }
+        .info { border-left-color: #00ccff; }
+        .feature { border-left-color: #ffaa00; }
+        .iframe-container {
+            margin: 20px 0;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+        iframe {
+            width: 100%;
+            height: 600px;
+            border: none;
+        }
+        .device-simulation {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin: 20px 0;
+        }
+        .device {
+            flex: 1;
+            min-width: 200px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        .breakpoint {
+            font-weight: bold;
+            color: #00ccff;
+        }
+        .status {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            margin-left: 10px;
+        }
+        .visible { background: rgba(0, 255, 136, 0.3); }
+        .hidden { background: rgba(255, 100, 100, 0.3); }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>📱 Mobile Responsiveness Test Results</h1>
+        <p>Testing the "Design and Develop by" text visibility on different screen sizes</p>
+        
+        <div class="test-item success">
+            <h3>✅ Implementation Complete</h3>
+            <p>Successfully implemented custom CSS for 360px+ phone visibility</p>
+        </div>
+        
+        <div class="test-item info">
+            <h3>🔧 Technical Changes</h3>
+            <ul>
+                <li>Changed Bootstrap class from <code>d-none d-md-inline</code> to <code>d-none d-sm-inline mobile-dev-text</code></li>
+                <li>Added custom CSS media query for 360px-575px range</li>
+                <li>Text now appears on phones 360px and larger</li>
+                <li>Text remains hidden on very small devices (&lt;360px)</li>
+            </ul>
+        </div>
+        
+        <div class="test-item feature">
+            <h3>📱 Responsive Breakpoints</h3>
+            <div class="device-simulation">
+                <div class="device">
+                    <div class="breakpoint">&lt;360px</div>
+                    <div>Very Small Phones</div>
+                    <span class="status hidden">Hidden</span>
+                </div>
+                <div class="device">
+                    <div class="breakpoint">360px-575px</div>
+                    <div>Small Phones</div>
+                    <span class="status visible">Visible</span>
+                </div>
+                <div class="device">
+                    <div class="breakpoint">576px+</div>
+                    <div>Larger Devices</div>
+                    <span class="status visible">Visible</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="test-item">
+            <h3>🚀 Live Application</h3>
+            <p>The application is now running with enhanced mobile responsiveness!</p>
+            <div class="iframe-container">
+                <iframe src="http://localhost:5000" title="Shad AI Web Scrapper"></iframe>
+            </div>
+        </div>
+        
+        <div class="test-item success">
+            <h3>🎯 Testing Instructions</h3>
+            <ol>
+                <li>Open Developer Tools (F12)</li>
+                <li>Toggle Device Simulation (Ctrl+Shift+M)</li>
+                <li>Test different screen widths:
+                    <ul>
+                        <li>320px (iPhone SE) - Text should be hidden</li>
+                        <li>375px (iPhone 12) - Text should be visible</li>
+                        <li>390px (iPhone 12 Pro) - Text should be visible</li>
+                        <li>414px (iPhone 12 Pro Max) - Text should be visible</li>
+                    </ul>
+                </li>
+                <li>Toggle navbar menu to see the text in mobile view</li>
+            </ol>
+        </div>
+    </div>
+    
+    <script>
+        // Auto-refresh iframe every 5 seconds to show latest changes
+        setInterval(() => {
+            const iframe = document.querySelector('iframe');
+            if (iframe) {
+                iframe.contentWindow.location.reload();
+            }
+        }, 5000);
+        
+        // Display current viewport size
+        function updateViewportInfo() {
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+            document.title = `Mobile Test (${width}x${height}) - Shad AI Web Scrapper`;
+        }
+        
+        window.addEventListener('resize', updateViewportInfo);
+        updateViewportInfo();
+    </script>
+</body>
+</html>

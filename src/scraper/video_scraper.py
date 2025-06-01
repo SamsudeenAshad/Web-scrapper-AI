@@ -47,6 +47,8 @@ class VideoScraper:
                 if video_sources:
                     videos.append({
                         'index': i,
+                        'src': video_sources[0]['url'],  # Frontend expects 'src' property
+                        'url': video_sources[0]['url'],  # Keep 'url' for backward compatibility
                         'sources': video_sources,
                         'poster': urljoin(url, poster) if poster else None,
                         'controls': video.has_attr('controls'),
@@ -79,6 +81,8 @@ class VideoScraper:
                 if self._is_video_iframe(full_url):
                     videos.append({
                         'index': len(videos),
+                        'src': full_url,  # Frontend expects 'src' property
+                        'url': full_url,  # Keep 'url' for backward compatibility
                         'sources': [{
                             'url': full_url,
                             'type': 'iframe'

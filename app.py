@@ -78,23 +78,22 @@ def scrape():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/download/<item_type>/<int:item_index>')
-def download_item(item_type, item_index):
+@app.route('/download', methods=['POST'])
+def download_item():
     try:
+        data = request.get_json()
+        url = data.get('url')
+        item_type = data.get('type')
+        
+        if not url:
+            return jsonify({'error': 'URL is required'}), 400
+            
         if item_type == 'image':
-            # Download image
-            image_url = request.args.get('url')
-            if not image_url:
-                return jsonify({'error': 'Image URL is required'}), 400
-            filename = file_handler.download_image(image_url, item_index)
+            filename = file_handler.download_image(url)
             return send_file(filename, as_attachment=True)
             
         elif item_type == 'video':
-            # Download video
-            video_url = request.args.get('url')
-            if not video_url:
-                return jsonify({'error': 'Video URL is required'}), 400
-            filename = file_handler.download_video(video_url, item_index)
+            filename = file_handler.download_video(url)
             return send_file(filename, as_attachment=True)
             
         elif item_type == 'content':

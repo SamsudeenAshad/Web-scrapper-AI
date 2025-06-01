@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frontend Test - Image Download</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: white;
+        }
+        .test-card {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .btn {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            color: white;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .success { background: rgba(40, 167, 69, 0.2); }
+        .error { background: rgba(220, 53, 69, 0.2); }
+        .info { background: rgba(23, 162, 184, 0.2); }
+        img {
+            max-width: 100%;
+            border-radius: 10px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>🕷️ Frontend Test - Image View & Download</h1>
+    
+    <div class="test-card">
+        <h3>Test Image URLs</h3>
+        <button class="btn" onclick="testImageView('https://httpbin.org/image/jpeg')">View JPEG Image</button>
+        <button class="btn" onclick="testImageDownload('https://httpbin.org/image/png', 'image')">Download PNG Image</button>
+        <button class="btn" onclick="testImageDownload('https://httpbin.org/image/svg', 'image')">Download SVG Image</button>
+        <button class="btn" onclick="testImageView('https://invalid-url.com/test.jpg')">Test Error Handling</button>
+    </div>
+
+    <div class="test-card">
+        <h3>Test Results</h3>
+        <div id="status"></div>
+        <div id="imagePreview"></div>
+    </div>
+
+    <script>
+        // Simplified version of the main functions for testing
+        async function testImageDownload(url, type) {
+            showStatus('Starting download test...', 'info');
+            
+            try {
+                const response = await fetch('/download', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ url, type })
+                });
+
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const downloadUrl = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = downloadUrl;
+                    
+                    // Get filename from response headers
+                    const contentDisposition = response.headers.get('content-disposition');
+                    let filename = `test_${type}_${Date.now()}`;
+                    if (contentDisposition) {
+                        const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+                        if (filenameMatch) {
+                            filename = filenameMatch[1];
+                        }
+                    }
+                    
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(downloadUrl);
+                    
+                    showStatus(`✅ Download successful! File: ${filename}`, 'success');
+                } else {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Download failed');
+                }
+            } catch (error) {
+                console.error('Download error:', error);
+                showStatus(`❌ Download failed: ${error.message}`, 'error');
+            }
+        }
+
+        function testImageView(url) {
+            showStatus('Testing image viewer...', 'info');
+            
+            try {
+                // Create modal similar to main.js
+                const modal = document.createElement('div');
+                modal.style.cssText = `
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: rgba(0, 0, 0, 0.9);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 10000;
+                    cursor: pointer;
+                `;
+                
+                const img = document.createElement('img');
+                img.src = url;
+                img.style.cssText = `
+                    max-width: 90%;
+                    max-height: 90%;
+                    object-fit: contain;
+                    border-radius: 10px;
+                    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+                `;
+                
+                const closeBtn = document.createElement('button');
+                closeBtn.innerHTML = '✕';
+                closeBtn.style.cssText = `
+                    position: absolute;
+                    top: 20px;
+                    right: 20px;
+                    background: rgba(255, 255, 255, 0.2);
+                    border: none;
+                    color: white;
+                    padding: 15px;
+                    border-radius: 50%;
+                    cursor: pointer;
+                    font-size: 18px;
+                    font-weight: bold;
+                `;
+                
+                img.onload = () => {
+                    showStatus('✅ Image loaded successfully!', 'success');
+                };
+                
+                img.onerror = () => {
+                    img.style.display = 'none';
+                    const errorMsg = document.createElement('div');
+                    errorMsg.innerHTML = `
+                        <div style="text-align: center; color: white;">
+                            <h3>⚠️ Unable to load image</h3>
+                            <p>The image may be protected or unavailable</p>
+                            <button onclick="window.open('${url}', '_blank')" style="padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                                🔗 Open in New Tab
+                            </button>
+                        </div>
+                    `;
+                    modal.appendChild(errorMsg);
+                    showStatus('❌ Image failed to load', 'error');
+                };
+                
+                modal.appendChild(img);
+                modal.appendChild(closeBtn);
+                
+                // Close modal handlers
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal || e.target === closeBtn) {
+                        document.body.removeChild(modal);
+                    }
+                });
+                
+                const escapeHandler = (e) => {
+                    if (e.key === 'Escape') {
+                        document.body.removeChild(modal);
+                        document.removeEventListener('keydown', escapeHandler);
+                    }
+                };
+                document.addEventListener('keydown', escapeHandler);
+                
+                document.body.appendChild(modal);
+                
+            } catch (error) {
+                console.error('View image error:', error);
+                showStatus(`❌ View error: ${error.message}`, 'error');
+                // Fallback
+                window.open(url, '_blank');
+            }
+        }
+
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('status');
+            const statusElement = document.createElement('div');
+            statusElement.className = `status ${type}`;
+            statusElement.innerHTML = `${new Date().toLocaleTimeString()}: ${message}`;
+            statusDiv.appendChild(statusElement);
+            
+            // Auto-scroll to bottom
+            statusDiv.scrollTop = statusDiv.scrollHeight;
+        }
+
+        // Initialize
+        showStatus('Frontend test page loaded. Click buttons to test functionality.', 'info');
+    </script>
+</body>
+</html>

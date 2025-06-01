@@ -70,30 +70,28 @@ class FileHandler:
         except Exception as e:
             raise Exception(f"Error downloading file: {str(e)}")
     
-    def _get_safe_filename(self, url, default_name, default_ext):
-        """Generate a safe filename from URL"""
+    def _get_safe_filename(self, url, default_name, extension):
+        """Generate a safe filename from URL or default name"""
         try:
             parsed = urlparse(url)
-            filename = parsed.path.split('/')[-1]
+            name = os.path.basename(parsed.path)
+            if not name:
+                name = f"{default_name}.{extension}"
+            else:
+                # Remove query parameters if present
+                name = name.split('?')[0]
+                # Add extension if missing
+                if not os.path.splitext(name)[1]:
+                    name = f"{name}.{extension}"
             
-            if not filename or '.' not in filename:
-                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-                filename = f"{default_name}_{timestamp}.{default_ext}"
-            
-            # Remove unsafe characters
-            safe_chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-"
-            filename = ''.join(c for c in filename if c in safe_chars)
-            
-            # Ensure it's not too long
-            if len(filename) > 100:
-                name, ext = os.path.splitext(filename)
-                filename = name[:90] + ext
-            
-            return filename
-        
+            # Make filename safe
+            name = "".join([c for c in name if c.isalpha() or c.isdigit() or c in '._- ']).rstrip()
+            # Add timestamp to prevent overwriting
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            base, ext = os.path.splitext(name)
+            return f"{base}_{timestamp}{ext}"
         except:
-            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-            return f"{default_name}_{timestamp}.{default_ext}"
+            return f"{default_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.{extension}"
     
     def get_file_info(self, filepath):
         """Get information about a downloaded file"""

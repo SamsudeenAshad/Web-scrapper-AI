@@ -211,25 +211,32 @@ class ShadAIScraper {
         if (totalItems) totalItems.textContent = itemCount;
         if (processingTimeEl) processingTimeEl.textContent = processingTime + 's';
         if (successRate) successRate.textContent = '95%';
-    }
-
-    displayMediaContent(data, container) {
+    }    displayMediaContent(data, container) {
         const { images = [], videos = [] } = data;
         
         container.innerHTML = `
             <div class="row">
-                ${images.map((img) => `
+                ${images.map((img, index) => `
                     <div class="col-md-6 col-lg-4 mb-4">
                         <div class="preview-item">
-                            <img src="${img.src}" alt="${img.alt || 'Scraped image'}" 
-                                 class="preview-image w-100" loading="lazy">
+                            <div class="image-container" style="position: relative; overflow: hidden; border-radius: 10px;">
+                                <img src="${img.src}" alt="${img.alt || 'Scraped image'}" 
+                                     class="preview-image w-100" loading="lazy"
+                                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                                     style="height: 200px; object-fit: cover;">
+                                <div class="image-placeholder" style="display: none; height: 200px; background: linear-gradient(135deg, #f0f0f0, #e0e0e0); align-items: center; justify-content: center; flex-direction: column;">
+                                    <i class="fas fa-image fa-3x text-muted mb-2"></i>
+                                    <small class="text-muted">Image preview unavailable</small>
+                                </div>
+                            </div>
                             <div class="p-3">
-                                <small class="text-muted">${img.alt || 'No description'}</small>
-                                <div class="mt-2">
-                                    <a href="${img.src}" target="_blank" class="btn btn-sm btn-outline-primary me-2">
-                                        <i class="fas fa-external-link-alt"></i> View
-                                    </a>
-                                    <button class="btn btn-sm btn-success" onclick="shadScraper.downloadFile('${img.src}', 'image')">
+                                <small class="text-muted d-block mb-2">${img.alt || 'No description'}</small>
+                                <small class="text-muted d-block mb-3" style="word-break: break-all; font-size: 0.8em;">${img.src}</small>
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-sm btn-outline-primary flex-fill" onclick="shadScraper.viewImage('${img.src.replace(/'/g, "\\'")}')">
+                                        <i class="fas fa-eye"></i> View
+                                    </button>
+                                    <button class="btn btn-sm btn-success flex-fill" onclick="shadScraper.downloadFile('${img.src.replace(/'/g, "\\'")}', 'image')">
                                         <i class="fas fa-download"></i> Download
                                     </button>
                                 </div>
@@ -237,16 +244,28 @@ class ShadAIScraper {
                         </div>
                     </div>
                 `).join('')}
-                ${videos.map((video) => `
+                ${videos.map((video, index) => `
                     <div class="col-md-6 col-lg-4 mb-4">
                         <div class="preview-item">
-                            <video src="${video.src}" class="preview-video w-100" controls loading="lazy">
-                                Your browser does not support video playback.
-                            </video>
+                            <div class="video-container" style="position: relative; overflow: hidden; border-radius: 10px;">
+                                <video src="${video.src}" class="preview-video w-100" controls loading="lazy"
+                                       style="height: 200px; object-fit: cover;"
+                                       onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                    Your browser does not support video playback.
+                                </video>
+                                <div class="video-placeholder" style="display: none; height: 200px; background: linear-gradient(135deg, #f0f0f0, #e0e0e0); align-items: center; justify-content: center; flex-direction: column;">
+                                    <i class="fas fa-video fa-3x text-muted mb-2"></i>
+                                    <small class="text-muted">Video preview unavailable</small>
+                                </div>
+                            </div>
                             <div class="p-3">
-                                <small class="text-muted">Video file</small>
-                                <div class="mt-2">
-                                    <button class="btn btn-sm btn-success" onclick="shadScraper.downloadFile('${video.src}', 'video')">
+                                <small class="text-muted d-block mb-2">Video file</small>
+                                <small class="text-muted d-block mb-3" style="word-break: break-all; font-size: 0.8em;">${video.src}</small>
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-sm btn-outline-primary flex-fill" onclick="shadScraper.viewImage('${video.src.replace(/'/g, "\\'")}')">
+                                        <i class="fas fa-eye"></i> View
+                                    </button>
+                                    <button class="btn btn-sm btn-success flex-fill" onclick="shadScraper.downloadFile('${video.src.replace(/'/g, "\\'")}', 'video')">
                                         <i class="fas fa-download"></i> Download
                                     </button>
                                 </div>
@@ -256,7 +275,7 @@ class ShadAIScraper {
                 `).join('')}
             </div>
         `;
-    }    displayTextContent(content, container) {
+    }displayTextContent(content, container) {
         // Handle case where content might be undefined or null
         if (!content) {
             container.innerHTML = '<div class="alert alert-warning">No content found</div>';
@@ -307,19 +326,39 @@ class ShadAIScraper {
             return;
         }
         
-        // If urls is an object with categorized links, extract all links
-        let urlList = [];
+        // Extract all URLs from categorized object
+        let allUrls = [];
         if (typeof urls === 'object' && !Array.isArray(urls)) {
-            // Flatten all URL categories into a single array
-            const categories = ['internal_links', 'external_links', 'email_links', 'social_links', 'file_links', 'tel_links'];
-            urlList = categories.reduce((acc, category) => {
-                if (urls[category] && Array.isArray(urls[category])) {
-                    return acc.concat(urls[category]);
+            const categories = [
+                { key: 'internal_links', label: 'Internal Links', icon: 'fas fa-home', color: '#28a745' },
+                { key: 'external_links', label: 'External Links', icon: 'fas fa-external-link-alt', color: '#007bff' },
+                { key: 'email_links', label: 'Email Links', icon: 'fas fa-envelope', color: '#ffc107' },
+                { key: 'social_links', label: 'Social Links', icon: 'fab fa-share-alt', color: '#e91e63' },
+                { key: 'file_links', label: 'File Links', icon: 'fas fa-file', color: '#6f42c1' },
+                { key: 'tel_links', label: 'Phone Links', icon: 'fas fa-phone', color: '#fd7e14' }
+            ];
+            
+            categories.forEach(category => {
+                if (urls[category.key] && Array.isArray(urls[category.key])) {
+                    urls[category.key].forEach(urlObj => {
+                        allUrls.push({
+                            url: typeof urlObj === 'object' ? urlObj.url || urlObj.original_href : urlObj,
+                            text: typeof urlObj === 'object' ? urlObj.text || 'Link' : 'Link',
+                            category: category.label,
+                            icon: category.icon,
+                            color: category.color
+                        });
+                    });
                 }
-                return acc;
-            }, []);
+            });
         } else if (Array.isArray(urls)) {
-            urlList = urls;
+            allUrls = urls.map(url => ({
+                url: typeof url === 'object' ? url.url || url.href : url,
+                text: typeof url === 'object' ? url.text || 'Link' : 'Link',
+                category: 'Links',
+                icon: 'fas fa-link',
+                color: '#007bff'
+            }));
         }
         
         container.innerHTML = `
@@ -327,59 +366,89 @@ class ShadAIScraper {
                 <div class="mb-3 d-flex justify-content-between align-items-center">
                     <h5><i class="fas fa-link me-2"></i>Extracted URLs</h5>
                     <span class="badge" style="background: var(--gradient-primary); color: white;">
-                        ${urlList.length} links found
+                        ${allUrls.length} links found
                     </span>
                 </div>
-                ${urlList.length > 0 ? `
-                    ${urlList.map((url) => `
-                        <div class="url-item">
-                            <a href="${url}" target="_blank" class="url-link">
-                                <i class="fas fa-external-link-alt me-2"></i>
-                                ${url}
-                            </a>
-                            <button class="btn btn-sm btn-outline-primary" onclick="navigator.clipboard.writeText('${url}')">
-                                <i class="fas fa-copy"></i>
-                            </button>
-                        </div>
-                    `).join('')}
+                
+                ${allUrls.length > 0 ? `
+                    <div class="row">
+                        ${allUrls.map((linkObj, index) => `
+                            <div class="col-12 mb-3">
+                                <div class="url-item-enhanced">
+                                    <div class="url-header">
+                                        <span class="url-category-badge" style="background-color: ${linkObj.color};">
+                                            <i class="${linkObj.icon} me-1"></i>
+                                            ${linkObj.category}
+                                        </span>
+                                        <button class="btn btn-sm btn-outline-primary copy-btn" 
+                                                onclick="shadScraper.copyToClipboard('${linkObj.url.replace(/'/g, "\\'")}')">
+                                            <i class="fas fa-copy"></i>
+                                        </button>
+                                    </div>
+                                    <div class="url-content">
+                                        <div class="url-text">${linkObj.text}</div>
+                                        <a href="${linkObj.url}" target="_blank" class="url-link">
+                                            <i class="fas fa-external-link-alt me-1"></i>
+                                            ${linkObj.url}
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
                 ` : `
                     <div class="text-center p-4">
                         <i class="fas fa-info-circle fa-3x text-muted mb-3"></i>
                         <p class="text-muted">No URLs found on this page.</p>
                     </div>
                 `}
+                
                 ${urls.totals ? `
                     <div class="mt-4">
                         <h6><i class="fas fa-chart-bar me-2"></i>URL Statistics</h6>
                         <div class="row">
-                            <div class="col-md-6">
-                                <small class="text-muted">
-                                    <i class="fas fa-home me-1"></i>Internal: ${urls.totals.internal || 0}
-                                </small>
+                            <div class="col-md-3 col-6 mb-2">
+                                <div class="stat-box">
+                                    <div class="stat-icon" style="color: #28a745;"><i class="fas fa-home"></i></div>
+                                    <div class="stat-info">
+                                        <div class="stat-number">${urls.totals.internal || 0}</div>
+                                        <div class="stat-label">Internal</div>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="col-md-6">
-                                <small class="text-muted">
-                                    <i class="fas fa-external-link-alt me-1"></i>External: ${urls.totals.external || 0}
-                                </small>
+                            <div class="col-md-3 col-6 mb-2">
+                                <div class="stat-box">
+                                    <div class="stat-icon" style="color: #007bff;"><i class="fas fa-external-link-alt"></i></div>
+                                    <div class="stat-info">
+                                        <div class="stat-number">${urls.totals.external || 0}</div>
+                                        <div class="stat-label">External</div>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="col-md-6">
-                                <small class="text-muted">
-                                    <i class="fas fa-envelope me-1"></i>Email: ${urls.totals.email || 0}
-                                </small>
+                            <div class="col-md-3 col-6 mb-2">
+                                <div class="stat-box">
+                                    <div class="stat-icon" style="color: #ffc107;"><i class="fas fa-envelope"></i></div>
+                                    <div class="stat-info">
+                                        <div class="stat-number">${urls.totals.email || 0}</div>
+                                        <div class="stat-label">Email</div>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="col-md-6">
-                                <small class="text-muted">
-                                    <i class="fas fa-share-alt me-1"></i>Social: ${urls.totals.social || 0}
-                                </small>
+                            <div class="col-md-3 col-6 mb-2">
+                                <div class="stat-box">
+                                    <div class="stat-icon" style="color: #e91e63;"><i class="fas fa-share-alt"></i></div>
+                                    <div class="stat-info">
+                                        <div class="stat-number">${urls.totals.social || 0}</div>
+                                        <div class="stat-label">Social</div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 ` : ''}
             </div>
         `;
-    }
-
-    async downloadFile(url, type) {
+    }    async downloadFile(url, type) {
         try {
             this.showToast('Starting download...', 'info');
             
@@ -396,7 +465,18 @@ class ShadAIScraper {
                 const downloadUrl = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = downloadUrl;
-                a.download = `scraped_${type}_${Date.now()}`;
+                
+                // Get filename from response headers or generate one
+                const contentDisposition = response.headers.get('content-disposition');
+                let filename = `scraped_${type}_${Date.now()}`;
+                if (contentDisposition) {
+                    const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+                    if (filenameMatch) {
+                        filename = filenameMatch[1];
+                    }
+                }
+                
+                a.download = filename;
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
@@ -404,11 +484,101 @@ class ShadAIScraper {
                 
                 this.showToast('Download completed!', 'success');
             } else {
-                throw new Error('Download failed');
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Download failed');
             }
         } catch (error) {
             console.error('Download error:', error);
-            this.showToast('Download failed. Please try again.', 'error');
+            this.showToast(`Download failed: ${error.message}`, 'error');
+        }
+    }
+
+    viewImage(url) {
+        try {
+            // Create a modal to view the image
+            const modal = document.createElement('div');
+            modal.className = 'image-modal';
+            modal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.9);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 10000;
+                cursor: pointer;
+            `;
+            
+            const img = document.createElement('img');
+            img.src = url;
+            img.style.cssText = `
+                max-width: 90%;
+                max-height: 90%;
+                object-fit: contain;
+                border-radius: 10px;
+                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            `;
+            
+            const closeBtn = document.createElement('button');
+            closeBtn.innerHTML = '<i class="fas fa-times"></i>';
+            closeBtn.style.cssText = `
+                position: absolute;
+                top: 20px;
+                right: 20px;
+                background: rgba(255, 255, 255, 0.2);
+                border: none;
+                color: white;
+                padding: 10px;
+                border-radius: 50%;
+                cursor: pointer;
+                font-size: 18px;
+                backdrop-filter: blur(10px);
+            `;
+            
+            img.onerror = () => {
+                img.style.display = 'none';
+                const errorMsg = document.createElement('div');
+                errorMsg.innerHTML = `
+                    <div style="text-align: center; color: white;">
+                        <i class="fas fa-exclamation-triangle fa-3x mb-3"></i>
+                        <h4>Unable to load image</h4>
+                        <p>The image may be protected or unavailable</p>
+                        <button class="btn btn-primary" onclick="window.open('${url}', '_blank')">
+                            <i class="fas fa-external-link-alt me-2"></i>Open in New Tab
+                        </button>
+                    </div>
+                `;
+                modal.appendChild(errorMsg);
+            };
+            
+            modal.appendChild(img);
+            modal.appendChild(closeBtn);
+            
+            // Close modal on click
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal || e.target === closeBtn) {
+                    document.body.removeChild(modal);
+                }
+            });
+            
+            // Close modal on escape key
+            const escapeHandler = (e) => {
+                if (e.key === 'Escape') {
+                    document.body.removeChild(modal);
+                    document.removeEventListener('keydown', escapeHandler);
+                }
+            };
+            document.addEventListener('keydown', escapeHandler);
+            
+            document.body.appendChild(modal);
+            
+        } catch (error) {
+            console.error('View image error:', error);
+            // Fallback to opening in new tab
+            window.open(url, '_blank');
         }
     }
 
@@ -744,6 +914,21 @@ class ShadAIScraper {
         } else {
             this.runTourSteps(steps, index + 1);
         }
+    }
+
+    copyToClipboard(text) {
+        navigator.clipboard.writeText(text).then(() => {
+            this.showToast('URL copied to clipboard!', 'success');
+        }).catch(() => {
+            // Fallback for older browsers
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+            this.showToast('URL copied to clipboard!', 'success');
+        });
     }
 }
 

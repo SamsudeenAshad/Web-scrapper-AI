@@ -24,18 +24,29 @@ class ImageScraper:
             
             for i, img in enumerate(img_tags):
                 src = img.get('src')
-                if src:
+                if src and src.strip():  # Ensure src is not empty or whitespace
+                    # Skip data URLs and invalid URLs
+                    if src.startswith('data:') or src.startswith('javascript:'):
+                        continue
+                        
                     # Convert relative URLs to absolute
                     full_url = urljoin(url, src)
+                    
+                    # Validate the URL format
+                    if not self._is_valid_image_url(full_url):
+                        continue
+                    
                     alt = img.get('alt', f'Image {i+1}')
                     
                     # Get image dimensions if available
                     width = img.get('width', 'auto')
                     height = img.get('height', 'auto')
                     
+                    # Ensure we have both 'src' and 'url' for compatibility
                     images.append({
                         'index': i,
-                        'url': full_url,
+                        'src': full_url,  # Frontend expects 'src' property
+                        'url': full_url,  # Keep 'url' for backward compatibility
                         'alt': alt,
                         'width': width,
                         'height': height,
@@ -59,6 +70,27 @@ class ImageScraper:
             filename = 'image.jpg'
         return filename
     
+    def _is_valid_image_url(self, url):
+        """Check if URL points to a valid image"""
+        try:
+            parsed = urlparse(url)
+            if not parsed.scheme or not parsed.netloc:
+                return False
+            
+            # Check for common image extensions
+            image_extensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg', '.ico']
+            path_lower = parsed.path.lower()
+            
+            # If URL has image extension, it's likely an image
+            if any(path_lower.endswith(ext) for ext in image_extensions):
+                return True
+            
+            # If no extension, assume it might be an image (some sites use dynamic URLs)
+            return True
+            
+        except Exception:
+            return False
+    
     def _extract_css_background_images(self, soup, base_url):
         """Extract images from CSS background-image properties"""
         images = []
@@ -72,15 +104,18 @@ class ImageScraper:
             bg_matches = re.findall(r'background-image:\s*url\(["\']?([^"\')\s]+)["\']?\)', style)
             
             for bg_url in bg_matches:
-                full_url = urljoin(base_url, bg_url)
-                images.append({
-                    'index': len(images),
-                    'url': full_url,
-                    'alt': f'Background Image {i+1}',
-                    'width': 'auto',
-                    'height': 'auto',
-                    'filename': self._get_filename_from_url(full_url),
-                    'type': 'background'
-                })
+                if bg_url and bg_url.strip():
+                    full_url = urljoin(base_url, bg_url)
+                    if self._is_valid_image_url(full_url):
+                        images.append({
+                            'index': len(images),
+                            'src': full_url,  # Frontend expects 'src' property
+                            'url': full_url,  # Keep 'url' for backward compatibility
+                            'alt': f'Background Image {i+1}',
+                            'width': 'auto',
+                            'height': 'auto',
+                            'filename': self._get_filename_from_url(full_url),
+                            'type': 'background'
+                        })
         
         return images
